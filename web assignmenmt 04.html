@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Markdown Slides Application</title>
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --bg-dark: #111827;
+            --bg-light: #f3f4f6;
+            --panel-bg: #ffffff;
+            --text-main: #1f2937;
+            --border-color: #e5e7eb;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-light);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Top Navigation Bar */
+        header {
+            background-color: var(--bg-dark);
+            color: white;
+            padding: 12px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        header h1 {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .nav-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+
+        button:hover:not(:disabled) {
+            background-color: var(--primary-hover);
+        }
+
+        button:disabled {
+            background-color: #9ca3af;
+            cursor: not-allowed;
+        }
+
+        /* Main Workspace: Create/Edit View (2 Sections) */
+        #editor-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            flex: 1;
+            height: calc(100vh - 60px);
+            overflow: hidden;
+        }
+
+        .section {
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid var(--border-color);
+            background: var(--panel-bg);
+            height: 100%;
+        }
+
+        .section-header {
+            padding: 10px 16px;
+            background: #f9fafb;
+            border-bottom: 1px solid var(--border-color);
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: #4b5563;
+        }
+
+        /* Markdown Editor Textarea */
+        textarea {
+            flex: 1;
+            padding: 16px;
+            border: none;
+            resize: none;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            outline: none;
+            background: #fafafa;
+        }
+
+        /* Realtime Preview & Presenter Workspace */
+        .preview-pane {
+            flex: 1;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            overflow-y: auto;
+            background: white;
+            position: relative;
+        }
+
+        .slide-content {
+            max-width: 800px;
+            width: 100%;
+            margin: auto;
+            text-align: left;
+        }
+
+        .slide-content h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            color: var(--bg-dark);
+        }
+
+        .slide-content h2 {
+            font-size: 1.75rem;
+            margin-bottom: 1rem;
+            color: #4b5563;
+        }
+
+        .slide-content p {
+            font-size: 1.2rem;
+            line-height: 1.6;
+            margin-bottom: 0.8rem;
+        }
+
+        /* Slide Footer & Navigation Controls */
+        .slide-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            padding-top: 20px;
+            border-top: 1px solid var(--border-color);
+            margin-top: auto;
+        }
+
+        .slide-counter {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #6b7280;
+        }
+
+        .controls {
+            display: flex;
+            gap: 8px;
+        }
+
+        /* Presentation Mode Fullscreen Overlay */
+        #presentation-view {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: white;
+            z-index: 1000;
+            flex-direction: column;
+            padding: 50px;
+        }
+
+        #presentation-view.active {
+            display: flex;
+        }
+
+        /* Toast notifications for saving status */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #10b981;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 4px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: opacity 0.3s ease;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 2000;
+        }
+        .toast.show {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header / Navbar -->
+    <header>
+        <h1>WebTech Slides App</h1>
+        <div class="nav-actions">
+            <button id="save-btn" onclick="saveSlides()">Save Slides (Ctrl+S)</button>
+            <button id="present-btn" onclick="togglePresentationMode()">Present Slides</button>
+        </div>
+    </header>
+
+    <!-- Create/Edit Screen: 2 Sections -->
+    <div id="editor-container">
+        <!-- Section 1: Markdown Editor Code Input -->
+        <div class="section">
+            <div class="section-header">Markdown Input File</div>
+            <textarea id="markdown-input" placeholder="Type your markdown here using --- to split slides..." oninput="handleMarkdownChange()"></textarea>
+        </div>
+
+        <!-- Section 2: Realtime Preview & Slide Controls -->
+        <div class="section">
+            <div class="section-header">Realtime Slide Preview</div>
+            <div class="preview-pane">
+                <div id="preview-slide-content" class="slide-content"></div>
+                <div class="slide-footer">
+                    <div id="preview-counter" class="slide-counter">1 / 1</div>
+                    <div class="controls">
+                        <button id="prev-btn" onclick="changeSlide(-1)">Left</button>
+                        <button id="next-btn" onclick="changeSlide(1)">Right</button>
+                        <button id="fs-btn" onclick="toggleFullScreen()">Full Screen</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Presentation Screen Mode Overlay -->
+    <div id="presentation-view">
+        <div id="pres-slide-content" class="slide-content" style="flex:1; display:flex; flex-direction:column; justify-content:center;"></div>
+        <div class="slide-footer">
+            <div id="pres-counter" class="slide-counter">1 / 1</div>
+            <div class="controls">
+                <button id="pres-prev-btn" onclick="changeSlide(-1)">Left</button>
+                <button id="pres-next-btn" onclick="changeSlide(1)">Right</button>
+                <button id="pres-fs-btn" onclick="toggleFullScreen()">Exit Full Screen</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="toast">Slides saved successfully!</div>
+
+    <script>
+        let slides = [];
+        let currentSlideIndex = 0;
+        let isPresentationMode = false;
+
+        const defaultMarkdown = `# This is Slide 01\n## This is Heading 02 in slide 01\nThis is your content on slide 01\n---\n# This is Slide 02\n## This is Heading 02 in slide 02\nThis is your content on slide 02`;
+
+        // Load data on startup from Browser's Local Storage
+        window.onload = function() {
+            const savedData = localStorage.getItem('webtech_slides_markdown');
+            const markdownInput = document.getElementById('markdown-input');
+            
+            if (savedData !== null) {
+                markdownInput.value = savedData;
+            } else {
+                markdownInput.value = defaultMarkdown;
+            }
+            parseMarkdownToSlides();
+        };
+
+        // Parse markdown file separated by '---'
+        function parseMarkdownToSlides() {
+            const content = document.getElementById('markdown-input').value;
+            // Split by lines containing only '---' or surrounding spaces
+            const rawSlides = content.split(/\n\s*---\s*\n/);
+            
+            slides = rawSlides.map(slideText => {
+                const lines = slideText.trim().split('\n');
+                let htmlContent = '';
+                
+                lines.forEach(line => {
+                    let trimmed = line.trim();
+                    if (trimmed.startsWith('# ')) {
+                        htmlContent += `<h1>${escapeHtml(trimmed.substring(2))}</h1>`;
+                    } else if (trimmed.startsWith('## ')) {
+                        htmlContent += `<h2>${escapeHtml(trimmed.substring(3))}</h2>`;
+                    } else if (trimmed.length > 0) {
+                        htmlContent += `<p>${escapeHtml(trimmed)}</p>`;
+                    }
+                });
+                return htmlContent;
+            });
+
+            if (currentSlideIndex >= slides.length) {
+                currentSlideIndex = Math.max(0, slides.length - 1);
+            }
+            updateView();
+        }
+
+        function handleMarkdownChange() {
+            parseMarkdownToSlides();
+        }
+
+        // Update preview content, counters, and button states
+        function updateView() {
+            const totalSlides = slides.length || 1;
+            const currentContent = slides[currentSlideIndex] || '<p>No content on this slide.</p>';
+
+            // Update Preview Section
+            document.getElementById('preview-slide-content').innerHTML = currentContent;
+            document.getElementById('preview-counter').innerText = `${currentSlideIndex + 1} / ${totalSlides}`;
+
+            // Update Presentation Section
+            document.getElementById('pres-slide-content').innerHTML = currentContent;
+            document.getElementById('pres-counter').innerText = `${currentSlideIndex + 1} / ${totalSlides}`;
+
+            // Button states requirement (Left disabled on first, Right disabled on last)
+            const prevDisabled = currentSlideIndex === 0;
+            const nextDisabled = currentSlideIndex >= totalSlides - 1;
+
+            document.getElementById('prev-btn').disabled = prevDisabled;
+            document.getElementById('next-btn').disabled = nextDisabled;
+            document.getElementById('pres-prev-btn').disabled = prevDisabled;
+            document.getElementById('pres-next-btn').disabled = nextDisabled;
+        }
+
+        function changeSlide(direction) {
+            const totalSlides = slides.length;
+            const newIndex = currentSlideIndex + direction;
+            if (newIndex >= 0 && newIndex < totalSlides) {
+                currentSlideIndex = newIndex;
+                updateView();
+            }
+        }
+
+        // Save slides into browser's local storage memory
+        function saveSlides() {
+            const markdownContent = document.getElementById('markdown-input').value;
+            localStorage.setItem('webtech_slides_markdown', markdownContent);
+            
+            showToast();
+        }
+
+        function showToast() {
+            const toast = document.getElementById('toast');
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 2000);
+        }
+
+        // Toggle Full Screen View / Presentation Mode
+        function togglePresentationMode() {
+            isPresentationMode = !isPresentationMode;
+            const presView = document.getElementById('presentation-view');
+            const fsBtnText = isPresentationMode ? "Exit Full Screen" : "Full Screen";
+            
+            document.getElementById('fs-btn').innerText = fsBtnText;
+            document.getElementById('pres-fs-btn').innerText = fsBtnText;
+
+            if (isPresentationMode) {
+                presView.classList.add('active');
+            } else {
+                presView.classList.remove('active');
+            }
+        }
+
+        function toggleFullScreen() {
+            togglePresentationMode();
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => {});
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
+            }
+        }
+
+        // Keyboard Shortcuts Handler
+        document.addEventListener('keydown', function(event) {
+            // Right Arrow Key -> Next slide
+            if (event.key === 'ArrowRight') {
+                changeSlide(1);
+            }
+            // Left Arrow Key -> Previous slide
+            else if (event.key === 'ArrowLeft') {
+                changeSlide(-1);
+            }
+            // Ctrl + S -> Save slides
+            else if (event.ctrlKey && event.key.toLowerCase() === 's') {
+                event.preventDefault();
+                saveSlides();
+            }
+            // F11 key toggle handled natively, but syncs state
+            else if (event.key === 'F11') {
+                // Let browser handle F11 fullscreen default
+            }
+        });
+
+        function escapeHtml(text) {
+            return text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+    </script>
+</body>
+</html>
