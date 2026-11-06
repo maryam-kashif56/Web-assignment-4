@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+<head>
+    <title>Markdown Slides App</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial;
+        }
+
+        body {
+            height: 100vh;
+            background: #f4f4f9;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            background: #2c3e50;
+            color: white;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        button {
+            padding: 8px 15px;
+            cursor: pointer;
+            border: none;
+            border-radius: 4px;
+        }
+
+        header button {
+            background: #3498db;
+            color: white;
+        }
+        .main-container {
+            display: flex;
+            flex: 1;
+        }
+        .editor-pane, .preview-pane {
+            width: 50%;
+            padding: 20px;
+        }
+        .editor-pane {
+            background: #222;
+            color: white;
+            display: flex;
+            flex-direction: column;
+        }
+        textarea {
+            flex: 1;
+            margin-top: 10px;
+            padding: 10px;
+            background: #333;
+            color: white;
+            font-size: 16px;
+        }
+        .preview-pane {
+            background: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+        }
+        #slide-box {
+            width: 100%;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 30px;
+        }
+        #slide-box h1 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+        }
+        #slide-box h2 {
+            color: gray;
+            margin-bottom: 15px;
+        }
+        #slide-box p {
+            font-size: 18px;
+            color: #333;
+        }
+        .controls {
+            width: 100%;
+            padding: 15px;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            background: #eee;
+        }
+        .controls button {
+            background: white;
+            border: 1px solid gray;
+        }
+        button:disabled {
+            opacity: 0.5;
+        }
+        :fullscreen {
+            background: white;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h2>Markdown Slides App</h2>
+        <div>
+            <button id="save-btn">Save</button>
+            <button id="present-btn">Present</button>
+        </div>
+    </header>
+    <div class="main-container">
+<div class="editor-pane">
+
+            <label>Markdown Input:</label>
+<textarea id="markdown-input">
+<h1>Slide 1</h1>
+<h2>Welcome</h2>
+<p>This is my first slide.</p>
+--
+<h1>Slide 2</h1>
+<h2>Introduction</h2>
+<p>This is my second slide.</p>
+</textarea>
+
+        </div>
+        <div class="preview-pane" id="preview-area">
+            <div id="slide-box"></div>
+            <div class="controls">
+                <button id="prev-btn">Previous</button>
+                <span id="counter">1 / 2</span>
+                <button id="next-btn">Next</button>
+                <button id="fullscreen-btn">Full Screen</button>
+            </div>
+        </div>
+    </div>
+    <script>
+        const input = document.getElementById('markdown-input');
+        const slideBox = document.getElementById('slide-box');
+        const counter = document.getElementById('counter');
+        const prevBtn = document.getElementById('prev-btn');
+        const nextBtn = document.getElementById('next-btn');
+        const saveBtn = document.getElementById('save-btn');
+        const presentBtn = document.getElementById('present-btn');
+        const fullscreenBtn = document.getElementById('fullscreen-btn');
+
+        const previewArea = document.getElementById('preview-area');
+        let slides = [];
+        let currentIndex = 0;
+        function parseMarkdown(text) {
+            text = text.replace(/^# (.*)$/gm, '<h1>$1</h1>');
+            text = text.replace(/^## (.*)$/gm, '<h2>$1</h2>');
+            text = text.replace(/\n/g, '<br>');
+            return text;
+
+        }
+        function updateSlides() {
+            slides = input.value.split('---');
+            currentIndex = 0;
+            showSlide();
+        }
+        function showSlide() {
+            if (slides[currentIndex].trim() === '') {
+                slideBox.innerHTML = 'No Content';
+            } else {
+                slideBox.innerHTML = parseMarkdown(slides[currentIndex]);
+            }
+            counter.textContent = (currentIndex + 1) + ' / ' + slides.length;
+            if (currentIndex === 0) {
+                prevBtn.disabled = true;
+            } else {
+                prevBtn.disabled = false;
+            }
+            if (currentIndex === slides.length - 1) {
+                nextBtn.disabled = true;
+            } else {
+                nextBtn.disabled = false;
+            }
+
+        }
+        prevBtn.addEventListener('click', function() {
+            if (currentIndex > 0) {
+                currentIndex--;
+                showSlide();
+            }
+        });
+        nextBtn.addEventListener('click', function() {
+            if (currentIndex < slides.length - 1) {
+                currentIndex++;
+                showSlide();
+            }
+        });
+        input.addEventListener('input', updateSlides);
+        function fullScreen() {
+            if (document.fullscreenElement) {
+                document.exitFullscreen();
+            } else {
+                previewArea.requestFullscreen();
+            }
+        }
+        presentBtn.addEventListener('click', fullScreen);
+        fullscreenBtn.addEventListener('click', fullScreen);
+        saveBtn.addEventListener('click', function() {
+            localStorage.setItem('slides', input.value);
+            alert('Slides Saved!');
+        });
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'ArrowRight') {
+                nextBtn.click();
+            }
+            if (e.key === 'ArrowLeft') {
+                prevBtn.click();
+
+            }
+            if (e.ctrlKey && e.key === 's') {
+                e.preventDefault();
+                saveBtn.click();
+            }
+        });
+        let savedSlides = localStorage.getItem('slides');
+        if (savedSlides !== null) {
+            input.value = savedSlides;
+        }
+        updateSlides();
+    </script>
+</body>
+</html>
